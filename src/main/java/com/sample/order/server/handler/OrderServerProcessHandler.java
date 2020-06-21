@@ -7,6 +7,7 @@ import com.sample.order.common.ResponseMessage;
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.SimpleChannelInboundHandler;
+import lombok.extern.slf4j.Slf4j;
 
 /**
  * OrderServerProcess Handler
@@ -20,6 +21,8 @@ import io.netty.channel.SimpleChannelInboundHandler;
  *
  * @author JueYi
  */
+
+@Slf4j
 public class OrderServerProcessHandler extends SimpleChannelInboundHandler<RequestMessage> {
 
 
@@ -37,6 +40,12 @@ public class OrderServerProcessHandler extends SimpleChannelInboundHandler<Reque
         responseMessage.setMessageHeader(requestMessage.getMessageHeader());
         responseMessage.setMessageBody(operationResult);
 
-        ctx.writeAndFlush(responseMessage);
+        if (ctx.channel().isActive() && ctx.channel().isWritable()) {
+            ctx.writeAndFlush(responseMessage);
+        } else {
+            log.error("Message dropped !");
+        }
+
+
     }
 }
