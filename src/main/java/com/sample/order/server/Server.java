@@ -14,6 +14,7 @@ import io.netty.channel.nio.NioEventLoopGroup;
 import io.netty.channel.socket.SocketChannel;
 import io.netty.channel.socket.nio.NioChannelOption;
 import io.netty.channel.socket.nio.NioServerSocketChannel;
+import io.netty.handler.flush.FlushConsolidationHandler;
 import io.netty.handler.logging.LogLevel;
 import io.netty.handler.logging.LoggingHandler;
 import io.netty.util.concurrent.DefaultThreadFactory;
@@ -67,6 +68,8 @@ public class Server {
                     pipeline.addLast("metric", metricHandler);
 
                     pipeline.addLast(new LoggingHandler(LogLevel.INFO));
+
+                    pipeline.addLast("flushEnhance", new FlushConsolidationHandler(5, true));
 
                     // 从EventLoopGroup中拿出一个绑定 只用其中一个线程 而非线程池
                     // pipeline.addLast( eventExecutors, new OrderServerProcessHandler());
