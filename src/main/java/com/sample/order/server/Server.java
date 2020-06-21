@@ -17,6 +17,7 @@ import io.netty.channel.socket.nio.NioServerSocketChannel;
 import io.netty.handler.logging.LogLevel;
 import io.netty.handler.logging.LoggingHandler;
 import io.netty.util.concurrent.DefaultThreadFactory;
+import io.netty.util.concurrent.UnorderedThreadPoolEventExecutor;
 
 import java.util.concurrent.ExecutionException;
 
@@ -41,6 +42,8 @@ public class Server {
         NioEventLoopGroup worker = new NioEventLoopGroup(0, new DefaultThreadFactory("worker"));
 
         MetricHandler metricHandler = new MetricHandler();
+        UnorderedThreadPoolEventExecutor business = new UnorderedThreadPoolEventExecutor(10, new DefaultThreadFactory("business"));
+        NioEventLoopGroup eventExecutors = new NioEventLoopGroup(0, new DefaultThreadFactory("business"));
 
         serverBootstrap.childOption(NioChannelOption.TCP_NODELAY, true);
         serverBootstrap.option(NioChannelOption.SO_BACKLOG, 1024);
@@ -65,7 +68,11 @@ public class Server {
 
                     pipeline.addLast(new LoggingHandler(LogLevel.INFO));
 
-                    pipeline.addLast(new OrderServerProcessHandler());
+                    // 从EventLoopGroup中拿出一个绑定 只用其中一个线程 而非线程池
+                    // pipeline.addLast( eventExecutors, new OrderServerProcessHandler());
+                    pipeline.addLast(business, new OrderServerProcessHandler());
+
+
                 }
             });
 

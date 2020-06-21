@@ -62,7 +62,7 @@ public class Client {
             RequestMessage requestMessage = new RequestMessage(IdUtil.nextId(), new OrderOperation(1001, "tudou"));
 
             // 发送一万次 演示内存泄漏
-            for (int i = 0; i < 10000; i++) {
+            for (int i = 0; i < 20; i++) {
                 channelFuture.channel().writeAndFlush(requestMessage);
             }
 
