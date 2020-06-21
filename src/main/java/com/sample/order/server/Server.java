@@ -17,6 +17,7 @@ import io.netty.channel.socket.nio.NioServerSocketChannel;
 import io.netty.handler.flush.FlushConsolidationHandler;
 import io.netty.handler.logging.LogLevel;
 import io.netty.handler.logging.LoggingHandler;
+import io.netty.handler.traffic.GlobalTrafficShapingHandler;
 import io.netty.util.concurrent.DefaultThreadFactory;
 import io.netty.util.concurrent.UnorderedThreadPoolEventExecutor;
 
@@ -42,6 +43,8 @@ public class Server {
         NioEventLoopGroup boss = new NioEventLoopGroup(0, new DefaultThreadFactory("boss"));
         NioEventLoopGroup worker = new NioEventLoopGroup(0, new DefaultThreadFactory("worker"));
 
+        NioEventLoopGroup eventLoopGroupForTrafficShaping = new NioEventLoopGroup(0, new DefaultThreadFactory("TS"));
+
         MetricHandler metricHandler = new MetricHandler();
         UnorderedThreadPoolEventExecutor business = new UnorderedThreadPoolEventExecutor(10, new DefaultThreadFactory("business"));
         NioEventLoopGroup eventExecutors = new NioEventLoopGroup(0, new DefaultThreadFactory("business"));
@@ -51,6 +54,8 @@ public class Server {
 
         try {
             serverBootstrap.group(boss, worker);
+
+            GlobalTrafficShapingHandler globalTrafficShapingHandler = new GlobalTrafficShapingHandler(eventLoopGroupForTrafficShaping, 10 * 1024 * 1024, 10 * 1024 * 1024);
 
             serverBootstrap.childHandler(new ChannelInitializer<SocketChannel>() {
 
@@ -65,6 +70,9 @@ public class Server {
                     pipeline.addLast(new OrderProtocolEncoder());
                     pipeline.addLast(new OrderProtocolDecoder());
 
+                    // trafficShaping
+                    pipeline.addLast("tsHandler", globalTrafficShapingHandler);
+                    // 统计
                     pipeline.addLast("metric", metricHandler);
 
                     pipeline.addLast(new LoggingHandler(LogLevel.INFO));
