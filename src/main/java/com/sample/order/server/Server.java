@@ -6,6 +6,7 @@ import com.sample.order.server.codec.OrderProtocolDecoder;
 import com.sample.order.server.codec.OrderProtocolEncoder;
 import com.sample.order.server.handler.MetricHandler;
 import com.sample.order.server.handler.OrderServerProcessHandler;
+import com.sample.order.server.handler.ServerIdleCheckHandler;
 import io.netty.bootstrap.ServerBootstrap;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelInitializer;
@@ -72,6 +73,10 @@ public class Server {
 
                     // trafficShaping
                     pipeline.addLast("tsHandler", globalTrafficShapingHandler);
+
+                    // idle
+                    pipeline.addLast("idleHandler", new ServerIdleCheckHandler());
+
                     // 统计
                     pipeline.addLast("metric", metricHandler);
 

@@ -4,6 +4,8 @@ import com.sample.order.client.codec.OrderFrameDecoder;
 import com.sample.order.client.codec.OrderFrameEncoder;
 import com.sample.order.client.codec.OrderProtocolDecoder;
 import com.sample.order.client.codec.OrderProtocolEncoder;
+import com.sample.order.client.codec.dispatcher.ClientIdleCheckHandler;
+import com.sample.order.client.codec.dispatcher.KeepaliveHandler;
 import com.sample.order.common.RequestMessage;
 import com.sample.order.common.order.OrderOperation;
 import com.sample.order.util.IdUtil;
@@ -34,6 +36,8 @@ public class Client {
 
         NioEventLoopGroup group = new NioEventLoopGroup();
 
+        KeepaliveHandler keepaliveHandler = new KeepaliveHandler();
+
         try {
             bootstrap.group(group);
 
@@ -44,6 +48,8 @@ public class Client {
 
                     ChannelPipeline pipeline = ch.pipeline();
 
+                    pipeline.addLast(new ClientIdleCheckHandler());
+
                     pipeline.addLast(new OrderFrameDecoder());
                     pipeline.addLast(new OrderFrameEncoder());
 
@@ -51,6 +57,8 @@ public class Client {
                     pipeline.addLast(new OrderProtocolDecoder());
 
                     pipeline.addLast(new LoggingHandler(LogLevel.INFO));
+
+                    pipeline.addLast(keepaliveHandler);
 
                 }
             });
@@ -62,11 +70,11 @@ public class Client {
             RequestMessage requestMessage = new RequestMessage(IdUtil.nextId(), new OrderOperation(1001, "tudou"));
 
             // 发送一万次 演示内存泄漏
-            for (int i = 0; i < 20; i++) {
-                channelFuture.channel().writeAndFlush(requestMessage);
-            }
+//            for (int i = 0; i < 20; i++) {
+//                channelFuture.channel().writeAndFlush(requestMessage);
+//            }
 
-//            channelFuture.channel().writeAndFlush(requestMessage);
+            channelFuture.channel().writeAndFlush(requestMessage);
 
             channelFuture.channel().closeFuture().sync();
 
