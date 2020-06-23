@@ -20,6 +20,10 @@ import io.netty.channel.socket.nio.NioChannelOption;
 import io.netty.channel.socket.nio.NioSocketChannel;
 import io.netty.handler.logging.LogLevel;
 import io.netty.handler.logging.LoggingHandler;
+import io.netty.handler.ssl.SslContext;
+import io.netty.handler.ssl.SslContextBuilder;
+
+import javax.net.ssl.SSLException;
 
 /**
  * 下单服务
@@ -29,7 +33,7 @@ import io.netty.handler.logging.LoggingHandler;
 public class Client {
 
 
-    public static void main(String[] args) throws InterruptedException {
+    public static void main(String[] args) throws InterruptedException, SSLException {
 
         Bootstrap bootstrap = new Bootstrap();
         bootstrap.channel(NioSocketChannel.class);
@@ -38,6 +42,8 @@ public class Client {
         NioEventLoopGroup group = new NioEventLoopGroup();
 
         KeepaliveHandler keepaliveHandler = new KeepaliveHandler();
+
+        SslContext sslContext = SslContextBuilder.forClient().build();
 
         try {
             bootstrap.group(group);
@@ -50,6 +56,8 @@ public class Client {
                     ChannelPipeline pipeline = ch.pipeline();
 
                     pipeline.addLast(new ClientIdleCheckHandler());
+
+                    pipeline.addLast(sslContext.newHandler(ch.alloc()));
 
                     pipeline.addLast(new OrderFrameDecoder());
                     pipeline.addLast(new OrderFrameEncoder());

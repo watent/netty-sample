@@ -22,10 +22,16 @@ import io.netty.handler.ipfilter.IpSubnetFilterRule;
 import io.netty.handler.ipfilter.RuleBasedIpFilter;
 import io.netty.handler.logging.LogLevel;
 import io.netty.handler.logging.LoggingHandler;
+import io.netty.handler.ssl.SslContext;
+import io.netty.handler.ssl.SslContextBuilder;
+import io.netty.handler.ssl.SslHandler;
+import io.netty.handler.ssl.util.SelfSignedCertificate;
 import io.netty.handler.traffic.GlobalTrafficShapingHandler;
 import io.netty.util.concurrent.DefaultThreadFactory;
 import io.netty.util.concurrent.UnorderedThreadPoolEventExecutor;
 
+import javax.net.ssl.SSLException;
+import java.security.cert.CertificateException;
 import java.util.concurrent.ExecutionException;
 
 /**
@@ -39,7 +45,7 @@ import java.util.concurrent.ExecutionException;
 public class Server {
 
 
-    public static void main(String[] args) throws InterruptedException, ExecutionException {
+    public static void main(String[] args) throws InterruptedException, ExecutionException, CertificateException, SSLException {
 
         ServerBootstrap serverBootstrap = new ServerBootstrap();
         serverBootstrap.channel(NioServerSocketChannel.class);
@@ -61,6 +67,12 @@ public class Server {
         RuleBasedIpFilter ruleBasedIpFilter = new RuleBasedIpFilter(ipSubnetFilterRule);
 
         AuthHandler authHandler = new AuthHandler();
+
+        SelfSignedCertificate selfSignedCertificate = new SelfSignedCertificate();
+        System.out.println(selfSignedCertificate.certificate());
+        SslContext sslContext = SslContextBuilder.forServer(selfSignedCertificate.certificate(), selfSignedCertificate.privateKey()).build();
+
+
         try {
             serverBootstrap.group(boss, worker);
 
@@ -80,6 +92,9 @@ public class Server {
                     pipeline.addLast("tsHandler", globalTrafficShapingHandler);
                     // idle
                     pipeline.addLast("idleHandler", new ServerIdleCheckHandler());
+
+                    SslHandler sslHandler = sslContext.newHandler(ch.alloc());
+                    pipeline.addLast("ssl", sslHandler);
 
                     pipeline.addLast("frameDecoder", new OrderFrameDecoder());
                     pipeline.addLast(new OrderFrameEncoder());
