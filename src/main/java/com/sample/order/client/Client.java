@@ -7,6 +7,7 @@ import com.sample.order.client.codec.OrderProtocolEncoder;
 import com.sample.order.client.codec.dispatcher.ClientIdleCheckHandler;
 import com.sample.order.client.codec.dispatcher.KeepaliveHandler;
 import com.sample.order.common.RequestMessage;
+import com.sample.order.common.auth.AuthOperation;
 import com.sample.order.common.order.OrderOperation;
 import com.sample.order.util.IdUtil;
 import io.netty.bootstrap.Bootstrap;
@@ -66,6 +67,10 @@ public class Client {
             ChannelFuture channelFuture = bootstrap.connect("127.0.0.1", 8090).sync();
             // 先连上
             channelFuture.sync();
+
+
+            RequestMessage firstAuthMessage = new RequestMessage(IdUtil.nextId(), new AuthOperation("admin", "123456"));
+            channelFuture.channel().writeAndFlush(firstAuthMessage);
 
             RequestMessage requestMessage = new RequestMessage(IdUtil.nextId(), new OrderOperation(1001, "tudou"));
 

@@ -4,6 +4,7 @@ import com.sample.order.server.codec.OrderFrameDecoder;
 import com.sample.order.server.codec.OrderFrameEncoder;
 import com.sample.order.server.codec.OrderProtocolDecoder;
 import com.sample.order.server.codec.OrderProtocolEncoder;
+import com.sample.order.server.handler.AuthHandler;
 import com.sample.order.server.handler.MetricHandler;
 import com.sample.order.server.handler.OrderServerProcessHandler;
 import com.sample.order.server.handler.ServerIdleCheckHandler;
@@ -16,6 +17,9 @@ import io.netty.channel.socket.SocketChannel;
 import io.netty.channel.socket.nio.NioChannelOption;
 import io.netty.channel.socket.nio.NioServerSocketChannel;
 import io.netty.handler.flush.FlushConsolidationHandler;
+import io.netty.handler.ipfilter.IpFilterRuleType;
+import io.netty.handler.ipfilter.IpSubnetFilterRule;
+import io.netty.handler.ipfilter.RuleBasedIpFilter;
 import io.netty.handler.logging.LogLevel;
 import io.netty.handler.logging.LoggingHandler;
 import io.netty.handler.traffic.GlobalTrafficShapingHandler;
@@ -53,6 +57,10 @@ public class Server {
         serverBootstrap.childOption(NioChannelOption.TCP_NODELAY, true);
         serverBootstrap.option(NioChannelOption.SO_BACKLOG, 1024);
 
+        IpSubnetFilterRule ipSubnetFilterRule = new IpSubnetFilterRule("127.1.0.1", 16, IpFilterRuleType.REJECT);
+        RuleBasedIpFilter ruleBasedIpFilter = new RuleBasedIpFilter(ipSubnetFilterRule);
+
+        AuthHandler authHandler = new AuthHandler();
         try {
             serverBootstrap.group(boss, worker);
 
@@ -65,20 +73,23 @@ public class Server {
 
                     ChannelPipeline pipeline = ch.pipeline();
 
-                    pipeline.addLast("frameDecoder", new OrderFrameDecoder());
-                    pipeline.addLast(new OrderFrameEncoder());
 
-                    pipeline.addLast(new OrderProtocolEncoder());
-                    pipeline.addLast(new OrderProtocolDecoder());
-
+                    // ipFilter
+                    pipeline.addLast("ipFilter", ruleBasedIpFilter);
                     // trafficShaping
                     pipeline.addLast("tsHandler", globalTrafficShapingHandler);
-
                     // idle
                     pipeline.addLast("idleHandler", new ServerIdleCheckHandler());
 
+                    pipeline.addLast("frameDecoder", new OrderFrameDecoder());
+                    pipeline.addLast(new OrderFrameEncoder());
+                    pipeline.addLast(new OrderProtocolEncoder());
+                    pipeline.addLast(new OrderProtocolDecoder());
+
                     // 统计
                     pipeline.addLast("metric", metricHandler);
+                    // 授权
+                    pipeline.addLast("auth", authHandler);
 
                     pipeline.addLast(new LoggingHandler(LogLevel.INFO));
 
